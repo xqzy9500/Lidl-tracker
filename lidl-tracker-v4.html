@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lidl Free Item Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+  :root {
+    --lidl-blue: #0050aa; --lidl-yellow: #FFD700; --lidl-red: #e60000;
+    --bg: #f5f5f0; --card: #ffffff; --text: #111; --muted: #666;
+    --border: #e0e0e0; --success: #1a8a4a; --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px 16px; }
+  header { text-align: center; margin-bottom: 32px; }
+  .logo { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .logo-icon { width: 44px; height: 44px; background: var(--lidl-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; color: var(--lidl-yellow); font-size: 18px; border: 3px solid var(--lidl-yellow); }
+  h1 { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: var(--lidl-blue); }
+  .subtitle { color: var(--muted); font-size: 14px; margin-top: 4px; }
+  .card { background: var(--card); border-radius: var(--radius); padding: 24px; border: 1px solid var(--border); margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+  .card h2 { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .step-badge { width: 24px; height: 24px; background: var(--lidl-blue); color: white; border-radius: 50%; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .input-group { margin-bottom: 14px; }
+  label { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: 6px; }
+  input[type="text"], input[type="password"] { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text); background: #fafafa; transition: border-color 0.2s; outline: none; }
+  input:focus { border-color: var(--lidl-blue); background: white; }
+  .help-text { font-size: 12px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+  .help-text a { color: var(--lidl-blue); text-decoration: none; }
+  .upload-area { border: 2px dashed var(--border); border-radius: var(--radius); padding: 32px 20px; text-align: center; cursor: pointer; transition: all 0.2s; background: #fafafa; }
+  .upload-area:hover, .upload-area.dragover { border-color: var(--lidl-blue); background: #f0f5ff; }
+  .upload-icon { font-size: 36px; margin-bottom: 10px; }
+  .upload-label { font-weight: 600; color: var(--lidl-blue); font-size: 15px; }
+  .upload-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  #file-input { display: none; }
+  .preview-img { width: 100%; border-radius: 8px; margin-top: 14px; border: 1px solid var(--border); max-height: 300px; object-fit: contain; }
+  .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-primary { background: var(--lidl-blue); color: white; }
+  .btn-primary:hover:not(:disabled) { background: #003d82; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,80,170,0.3); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .status-box { border-radius: 10px; padding: 16px; font-size: 14px; line-height: 1.6; display: none; margin-top: 14px; }
+  .status-box.loading { display: block; background: #eef4ff; color: var(--lidl-blue); border: 1px solid #c0d6f7; }
+  .status-box.success { display: block; background: #edfaf3; color: var(--success); border: 1px solid #a3ddb8; }
+  .status-box.error { display: block; background: #fff0f0; color: var(--lidl-red); border: 1px solid #f5c0c0; }
+  .results-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .result-card { border-radius: 10px; padding: 14px; border: 1.5px solid var(--border); }
+  .result-card.fruit { border-color: #e53935; background: #fff5f5; }
+  .result-card.veg { border-color: #4caf50; background: #f1fdf2; }
+  .result-card.bakery { border-color: #ff9800; background: #fff8f0; }
+  .result-tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+  .result-card.fruit .result-tag { color: #b71c1c; }
+  .result-card.veg .result-tag { color: #2e7d32; }
+  .result-card.bakery .result-tag { color: #e65100; }
+  .result-item { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .result-date { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
+  .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .saved-badge { display: inline-block; background: #edfaf3; color: #1a8a4a; border: 1px solid #a3ddb8; border-radius: 6px; font-size: 11px; font-weight: 600; padding: 2px 8px; margin-left: 8px; vertical-align: middle; }
+  .btn-secondary { background: #f0f0f0; color: #333; font-size: 13px; padding: 8px 14px; width: auto; border-radius: 8px; margin-top: 10px; border: 1px solid var(--border); }
+  .btn-secondary:hover { background: #e0e0e0; }
+  .notion-guide { background: #f0f5ff; border: 1px solid #c0d6f7; border-radius: 10px; padding: 14px; font-size: 13px; line-height: 1.7; color: #1a3a6b; margin-top: 12px; }
+  .notion-guide strong { color: var(--lidl-blue); }
+  details summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--lidl-blue); margin-bottom: 6px; list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before { content: '▶ '; font-size: 10px; }
+  details[open] summary::before { content: '▼ '; }
+  .bakery-note { font-size: 12px; color: #e65100; margin-top: 5px; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">L</div>
+    <h1>Lidl Free Item Tracker</h1>
+  </div>
+  <p class="subtitle">Upload screenshot → AI reads items → Saves to Notion</p>
+</header>
+
+<!-- Step 1: Notion Setup -->
+<div class="card">
+  <h2><span class="step-badge">1</span> Notion Setup</h2>
+  <details>
+    <summary>How to get your Notion API key & Database IDs</summary>
+    <div class="notion-guide">
+      <strong>1. Create integration:</strong> Go to <a href="https://www.notion.so/my-integrations" target="_blank">notion.so/my-integrations</a> → New integration → Copy the API key.<br><br>
+      <strong>2. Create 3 Notion databases:</strong> "Free Fruit", "Free Vegetable", "Free Bakery". Each needs columns: <em>Name</em> (title) and <em>Expiry Date</em> (date).<br><br>
+      <strong>3. Share each database</strong> with your integration (click ••• → Connect to → your integration).<br><br>
+      <strong>4. Get Database ID:</strong> Open each database in browser — copy the ID from the URL between the last / and the ?
+    </div>
+  </details>
+  <br>
+  <div class="input-group">
+    <label>🤖 Anthropic API Key</label>
+    <input type="password" id="anthropic-key" placeholder="sk-ant-..." />
+    <p class="help-text">Get yours free at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
+  </div>
+  <div class="input-group">
+    <label>Notion API Key</label>
+    <input type="password" id="notion-key" placeholder="secret_xxxxxxxxxxxx" />
+  </div>
+  <div class="input-group">
+    <label>🍎 Fruit Database ID</label>
+    <input type="text" id="db-fruit" placeholder="abc123def456..." />
+  </div>
+  <div class="input-group">
+    <label>🥦 Vegetable Database ID</label>
+    <input type="text" id="db-veg" placeholder="abc123def456..." />
+  </div>
+
+  <div style="display:flex;gap:10px;margin-top:4px">
+    <button class="btn btn-secondary" onclick="saveCredentials()">💾 Save Details</button>
+    <button class="btn btn-secondary" onclick="clearCredentials()" style="color:#e60000">🗑️ Clear Saved</button>
+  </div>
+  <div id="save-badge" style="display:none;margin-top:8px"><span class="saved-badge">✅ Details saved</span></div>
+</div>
+
+<!-- Step 2: Upload Screenshot -->
+<div class="card">
+  <h2><span class="step-badge">2</span> Account & Screenshot</h2>
+  <div class="input-group">
+    <label>📧 Email for this scan</label>
+    <input type="text" id="lidl-email" placeholder="your@email.com" />
+  </div>
+  <div class="input-group">
+    <label>🔒 Password for this scan</label>
+    <input type="password" id="lidl-pass" placeholder="••••••••" />
+  </div>
+  <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+    <div class="upload-icon">📱</div>
+    <div class="upload-label">Tap to upload screenshot</div>
+    <div class="upload-sub">PNG, JPG supported</div>
+  </div>
+  <input type="file" id="file-input" accept="image/*">
+  <img id="preview" class="preview-img" style="display:none" />
+</div>
+
+<!-- Step 3: Process -->
+<div class="card">
+  <h2><span class="step-badge">3</span> Extract & Save</h2>
+  <button class="btn btn-primary" id="process-btn" onclick="processImage()" disabled>
+    🔍 Scan & Save to Notion
+  </button>
+  <div id="status" class="status-box"></div>
+  <div id="results" style="display:none">
+    <div class="results-grid" style="grid-template-columns:1fr 1fr">
+      <div class="result-card fruit">
+        <div class="result-tag">🍎 Free Fruit & Bakery</div>
+        <div class="result-item" id="fruit-name">—</div>
+        <div class="result-date" id="fruit-date">—</div>
+      </div>
+      <div class="result-card veg">
+        <div class="result-tag">🥦 Free Veg & Bakery</div>
+        <div class="result-item" id="veg-name">—</div>
+        <div class="result-date" id="veg-date">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let imageBase64 = null;
+  let imageMediaType = 'image/jpeg';
+  const fileInput = document.getElementById('file-input');
+
+  // Load saved credentials on page load
+  function loadCredentials() {
+    const saved = JSON.parse(localStorage.getItem('lidl-tracker-creds') || '{}');
+    if (saved.anthropicKey) document.getElementById('anthropic-key').value = saved.anthropicKey;
+    if (saved.notionKey) document.getElementById('notion-key').value = saved.notionKey;
+    if (saved.dbFruit) document.getElementById('db-fruit').value = saved.dbFruit;
+    if (saved.dbVeg) document.getElementById('db-veg').value = saved.dbVeg;
+
+    if (Object.keys(saved).length > 0) document.getElementById('save-badge').style.display = 'block';
+  }
+
+  function saveCredentials() {
+    const creds = {
+      anthropicKey: document.getElementById('anthropic-key').value,
+      notionKey: document.getElementById('notion-key').value,
+      dbFruit: document.getElementById('db-fruit').value,
+      dbVeg: document.getElementById('db-veg').value
+    };
+    localStorage.setItem('lidl-tracker-creds', JSON.stringify(creds));
+    document.getElementById('save-badge').style.display = 'block';
+  }
+
+  function clearCredentials() {
+    localStorage.removeItem('lidl-tracker-creds');
+    ['anthropic-key','notion-key','db-fruit','db-veg'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('save-badge').style.display = 'none';
+  }
+
+  loadCredentials();
+  const uploadArea = document.getElementById('upload-area');
+  const preview = document.getElementById('preview');
+  const processBtn = document.getElementById('process-btn');
+
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target.result;
+      imageBase64 = result.split(',')[1];
+      imageMediaType = result.split(';')[0].split(':')[1] || 'image/jpeg';
+      preview.src = result;
+      preview.style.display = 'block';
+      processBtn.disabled = false;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+  uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+  uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) { fileInput.files = e.dataTransfer.files; fileInput.dispatchEvent(new Event('change')); }
+  });
+
+  function setStatus(type, msg) {
+    const el = document.getElementById('status');
+    el.className = 'status-box ' + type;
+    el.innerHTML = msg;
+  }
+
+  async function processImage() {
+    const anthropicKey = document.getElementById('anthropic-key').value.trim();
+    const apiKey = document.getElementById('notion-key').value.trim();
+    const dbFruit = document.getElementById('db-fruit').value.trim().replace(/-/g, '');
+    const dbVeg = document.getElementById('db-veg').value.trim().replace(/-/g, '');
+    if (!apiKey || !dbFruit || !dbVeg) {
+      setStatus('error', '⚠️ Please fill in your Notion API key and both Database IDs.');
+      return;
+    }
+    if (!imageBase64) {
+      setStatus('error', '⚠️ Please upload a screenshot first.');
+      return;
+    }
+
+    processBtn.disabled = true;
+    processBtn.innerHTML = '<span class="spinner"></span> Scanning screenshot...';
+    setStatus('loading', '🔍 AI is reading your screenshot...');
+    document.getElementById('results').style.display = 'none';
+
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const todayDisplay = today.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    try {
+      const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-api-key': anthropicKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: imageMediaType, data: imageBase64 } },
+              {
+                type: 'text',
+                text: `Today's date is ${todayStr} (${todayDisplay}).
+
+Look at this Lidl Plus app screenshot and find these 3 separate free items:
+1. FREE FRUIT item (e.g. "Free Fruit", "Free Apple", etc.)
+2. FREE VEGETABLE item (e.g. "Free Vegetable", "Free Carrot", etc.)
+3. FREE BAKERY item (e.g. "Free Bakery", "Free Bread", "Free Croissant", etc.)
+
+For each item, find its name and how many days until it expires.
+Calculate the actual expiry date by adding those days to today (${todayStr}).
+
+Respond ONLY with valid JSON, no markdown, no explanation:
+{
+  "fruit": { "name": "Item name", "expiry_date": "YYYY-MM-DD" },
+  "vegetable": { "name": "Item name", "expiry_date": "YYYY-MM-DD" },
+  "bakery": { "name": "Item name", "expiry_date": "YYYY-MM-DD" }
+}
+
+If an item is not visible in the screenshot, set it to null.`
+              }
+            ]
+          }]
+        })
+      });
+
+      const claudeData = await claudeRes.json();
+      if (!claudeRes.ok) throw new Error(claudeData.error?.message || 'Claude API error');
+
+      const rawText = claudeData.content.map(c => c.text || '').join('');
+      const clean = rawText.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+
+      if (!parsed.fruit && !parsed.vegetable && !parsed.bakery) {
+        throw new Error('No free items found in the screenshot. Make sure the screenshot shows your Lidl Plus free items.');
+      }
+
+      setStatus('loading', '🗑️ Deleting expired entries...');
+
+      // Delete expired entries from both DBs first
+      await deleteExpiredEntries(apiKey, dbFruit, todayStr);
+      await deleteExpiredEntries(apiKey, dbVeg, todayStr);
+
+      setStatus('loading', '✅ Items found! Saving to Notion...');
+
+      const email = document.getElementById('lidl-email').value.trim();
+      const pass = document.getElementById('lidl-pass').value.trim();
+
+      // Save 1 combined entry → fruit DB only
+      if (parsed.fruit) {
+        await saveToNotion(apiKey, dbFruit, 'Free Fruit & Bakery', parsed.fruit.expiry_date, email, pass);
+      }
+      // Save 1 combined entry → veg DB only
+      if (parsed.vegetable) {
+        await saveToNotion(apiKey, dbVeg, 'Free Veg & Bakery', parsed.vegetable.expiry_date, email, pass);
+      }
+
+      // Show results
+      document.getElementById('results').style.display = 'block';
+
+      if (parsed.fruit) {
+        document.getElementById('fruit-name').textContent = parsed.fruit.name;
+        document.getElementById('fruit-date').textContent = 'Expires: ' + formatDate(parsed.fruit.expiry_date);
+      } else {
+        document.getElementById('fruit-name').textContent = 'Not found';
+        document.getElementById('fruit-date').textContent = '';
+      }
+
+      if (parsed.vegetable) {
+        document.getElementById('veg-name').textContent = parsed.vegetable.name;
+        document.getElementById('veg-date').textContent = 'Expires: ' + formatDate(parsed.vegetable.expiry_date);
+      } else {
+        document.getElementById('veg-name').textContent = 'Not found';
+        document.getElementById('veg-date').textContent = '';
+      }
+
+      setStatus('success', '✅ Saved to Notion!<br>Screenshot taken: <strong>' + todayDisplay + '</strong>');
+
+    } catch (err) {
+      setStatus('error', '❌ Error: ' + err.message);
+    } finally {
+      processBtn.disabled = false;
+      processBtn.innerHTML = '🔍 Scan & Save to Notion';
+    }
+  }
+
+  async function saveToNotion(apiKey, databaseId, itemName, expiryDate, email, pass) {
+    const properties = {
+      Name: { title: [{ text: { content: itemName } }] },
+      'Expiry Date': { date: { start: expiryDate } }
+    };
+    if (email) properties['Email'] = { rich_text: [{ text: { content: email } }] };
+    if (pass) properties['Password'] = { rich_text: [{ text: { content: pass } }] };
+
+    const res = await fetch('https://api.notion.com/v1/pages', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + apiKey,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      body: JSON.stringify({
+        parent: { database_id: databaseId },
+        properties
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error('Notion error: ' + (data.message || 'Failed to save'));
+    return data;
+  }
+
+  async function deleteExpiredEntries(apiKey, databaseId, todayStr) {
+    // Query all pages in the database
+    const res = await fetch('https://api.notion.com/v1/databases/' + databaseId + '/query', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + apiKey,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      body: JSON.stringify({ page_size: 100 })
+    });
+    if (!res.ok) return; // silently skip if DB not accessible
+    const data = await res.json();
+    const today = new Date(todayStr);
+
+    for (const page of data.results) {
+      const expiryProp = page.properties['Expiry Date'];
+      if (expiryProp && expiryProp.date && expiryProp.date.start) {
+        const expiry = new Date(expiryProp.date.start);
+        if (expiry < today) {
+          // Archive (delete) the page
+          await fetch('https://api.notion.com/v1/pages/' + page.id, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': 'Bearer ' + apiKey,
+              'Content-Type': 'application/json',
+              'Notion-Version': '2022-06-28'
+            },
+            body: JSON.stringify({ archived: true })
+          });
+        }
+      }
+    }
+  }
+
+  function formatDate(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+</script>
+</body>
+</html>
